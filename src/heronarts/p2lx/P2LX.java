@@ -24,8 +24,14 @@
 
 package heronarts.p2lx;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+
 import heronarts.p2lx.ui.UI;
 import heronarts.lx.LX;
+import heronarts.lx.LXEngine;
 import heronarts.lx.effect.DesaturationEffect;
 import heronarts.lx.effect.FlashEffect;
 import heronarts.lx.model.GridModel;
@@ -99,6 +105,27 @@ public class P2LX extends LX {
 
   public final Timer timer = new Timer();
 
+  public interface KeyEventHandler {
+    void keyEvent(KeyEvent keyEvent);
+  }
+
+  private final List<KeyEventHandler> keyEventHandlers = new ArrayList<KeyEventHandler>();
+
+  private class InputDispatch implements LXEngine.Dispatch {
+    private BlockingQueue<KeyEvent> eventQueue = new LinkedBlockingQueue<KeyEvent>();
+    @Override
+    public void dispatch() {
+      KeyEvent keyEvent = null;
+      while ((keyEvent = this.eventQueue.poll()) != null) {
+        for (KeyEventHandler keyEventHandler : P2LX.this.keyEventHandlers) {
+          keyEventHandler.keyEvent(keyEvent);
+        }
+      }
+    }
+  }
+
+  private final InputDispatch inputDispatch = new InputDispatch();
+
   public P2LX(PApplet applet) {
     this(applet, new LXModel());
   }
@@ -129,6 +156,10 @@ public class P2LX extends LX {
     applet.registerMethod("draw", this);
     applet.registerMethod("dispose", this);
     applet.registerMethod("keyEvent", this);
+
+    this.engine.setInputDispatch(this.inputDispatch);
+
+    addKeyEventHandler(this.keyEventHandler);
   }
 
   /**
@@ -215,68 +246,78 @@ public class P2LX extends LX {
     this.timer.drawNanos = System.nanoTime() - drawStart;
   }
 
+  public void addKeyEventHandler(KeyEventHandler keyEventHandler) {
+    this.keyEventHandlers.add(keyEventHandler);
+  }
+
   public void keyEvent(KeyEvent keyEvent) {
-    char keyChar = keyEvent.getKey();
-    int keyCode = keyEvent.getKeyCode();
-    int action = keyEvent.getAction();
-    if (action == KeyEvent.RELEASE) {
-      switch (Character.toLowerCase(keyChar)) {
-      case '[':
-        this.engine.goPrev();
-        break;
-      case ']':
-        this.engine.goNext();
-        break;
-      case 'f':
-        this.flags.showFramerate = false;
-        break;
-      case ' ':
-        if (this.flags.keyboardTempo) {
-          this.tempo.tap();
+    this.inputDispatch.eventQueue.add(keyEvent);
+  }
+
+  private final KeyEventHandler keyEventHandler = new KeyEventHandler() {
+    public void keyEvent(KeyEvent keyEvent) {
+      char keyChar = keyEvent.getKey();
+      int keyCode = keyEvent.getKeyCode();
+      int action = keyEvent.getAction();
+      if (action == KeyEvent.RELEASE) {
+        switch (Character.toLowerCase(keyChar)) {
+        case '[':
+          P2LX.this.engine.goPrev();
+          break;
+        case ']':
+          P2LX.this.engine.goNext();
+          break;
+        case 'f':
+          P2LX.this.flags.showFramerate = false;
+          break;
+        case ' ':
+          if (P2LX.this.flags.keyboardTempo) {
+            P2LX.this.tempo.tap();
+          }
+          break;
+        case 's':
+          P2LX.this.desaturation.disable();
+          break;
+        case '/':
+          P2LX.this.flash.disable();
+          break;
         }
-        break;
-      case 's':
-        this.desaturation.disable();
-        break;
-      case '/':
-        this.flash.disable();
-        break;
-      }
-    } else if (action == KeyEvent.PRESS) {
-      switch (keyCode) {
-      case java.awt.event.KeyEvent.VK_UP:
-        if (keyEvent.isMetaDown()) {
-          this.engine.goPrev();
+      } else if (action == KeyEvent.PRESS) {
+        switch (keyCode) {
+        case java.awt.event.KeyEvent.VK_UP:
+          if (keyEvent.isMetaDown()) {
+            P2LX.this.engine.goPrev();
+          }
+          break;
+        case java.awt.event.KeyEvent.VK_DOWN:
+          if (keyEvent.isMetaDown()) {
+            P2LX.this.engine.goNext();
+          }
+          break;
+        case java.awt.event.KeyEvent.VK_LEFT:
+          if (P2LX.this.flags.keyboardTempo) {
+            P2LX.this.tempo.setBpm(P2LX.this.tempo.bpm() - .1);
+          }
+          break;
+        case java.awt.event.KeyEvent.VK_RIGHT:
+          if (P2LX.this.flags.keyboardTempo) {
+            P2LX.this.tempo.setBpm(P2LX.this.tempo.bpm() + .1);
+          }
+          break;
         }
-        break;
-      case java.awt.event.KeyEvent.VK_DOWN:
-        if (keyEvent.isMetaDown()) {
-          this.engine.goNext();
+        switch (keyChar) {
+        case 'f':
+          P2LX.this.flags.showFramerate = true;
+          break;
+        case 's':
+          P2LX.this.desaturation.enable();
+          break;
+        case '/':
+          P2LX.this.flash.enable();
+          break;
         }
-        break;
-      case java.awt.event.KeyEvent.VK_LEFT:
-        if (this.flags.keyboardTempo) {
-          this.tempo.setBpm(this.tempo.bpm() - .1);
-        }
-        break;
-      case java.awt.event.KeyEvent.VK_RIGHT:
-        if (this.flags.keyboardTempo) {
-          this.tempo.setBpm(this.tempo.bpm() + .1);
-        }
-        break;
-      }
-      switch (keyChar) {
-      case 'f':
-        this.flags.showFramerate = true;
-        break;
-      case 's':
-        this.desaturation.enable();
-        break;
-      case '/':
-        this.flash.enable();
-        break;
       }
     }
-  }
+  };
 
 }
