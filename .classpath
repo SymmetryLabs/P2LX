@@ -6,6 +6,7 @@
 	<classpathentry kind="lib" path="classpath/video.jar"/>
 	<classpathentry kind="lib" path="classpath/minim.jar"/>
 	<classpathentry kind="lib" path="classpath/jogl-all.jar"/>
+	<classpathentry kind="lib" path="lib/concurrent-locks-1.0.0.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/LX"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
