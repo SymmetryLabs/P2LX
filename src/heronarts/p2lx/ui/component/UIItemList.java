@@ -291,7 +291,7 @@ public class UIItemList extends UI2dTextComponent implements UIFocus {
     this.items = items;
     this.numVisibleItems = (int) (this.height / this.itemHeight);
     this.hasScroll = this.items.size() > this.numVisibleItems;
-    this.focusIndex.setRange(0, this.items.size());
+    this.focusIndex.setRange(0, Math.max(1, this.items.size()));
     this.scrollOffset.setRange(0,
         Math.max(0, this.items.size() - this.numVisibleItems) + 1);
     onScrollOffsetChanged();
